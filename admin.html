@@ -6,199 +6,47 @@
     <title>🔑 Admin Dashboard</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #0a0a0a;
-            color: #e0e0e0;
-            padding: 20px;
-            min-height: 100vh;
-        }
-        .container { max-width: 1200px; margin: 0 auto; }
-        h1 {
-            color: #fff;
-            border-bottom: 2px solid #333;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-            font-size: 28px;
-        }
-        .card {
-            background: #1a1a1a;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border: 1px solid #2a2a2a;
-        }
-        .card h2 {
-            color: #fff;
-            font-size: 18px;
-            margin-bottom: 15px;
-        }
-        .row {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-        input, select, button, textarea {
-            padding: 10px 16px;
-            border-radius: 8px;
-            border: 1px solid #333;
-            background: #0d0d0d;
-            color: #fff;
-            font-size: 14px;
-        }
-        textarea {
-            width: 100%;
-            min-height: 200px;
-            font-family: monospace;
-            resize: vertical;
-        }
-        button {
-            background: #4a9eff;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background 0.2s;
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0a0a0a; color: #e0e0e0; padding: 20px; min-height: 100vh; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        h1 { color: #fff; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; font-size: 28px; }
+        .card { background: #1a1a1a; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #2a2a2a; }
+        .card h2 { color: #fff; font-size: 18px; margin-bottom: 15px; }
+        .row { display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
+        input, select, button { padding: 10px 16px; border-radius: 8px; border: 1px solid #333; background: #0d0d0d; color: #fff; font-size: 14px; }
+        button { background: #4a9eff; border: none; cursor: pointer; font-weight: 600; transition: background 0.2s; }
         button:hover { background: #6aafff; }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #2a2a2a;
-        }
-        th {
-            color: #aaa;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 12px;
-            letter-spacing: 0.5px;
-        }
-        .badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #2a2a2a; }
+        th { color: #aaa; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
         .badge-day { background: #ff6b35; color: #fff; }
         .badge-week { background: #ffb347; color: #fff; }
         .badge-month { background: #4a9eff; color: #fff; }
         .badge-lifetime { background: #28c840; color: #fff; }
         .badge-expired { background: #ff4444; color: #fff; }
-        .copy-btn {
-            background: transparent;
-            border: 1px solid #444;
-            padding: 4px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            color: #aaa;
-            font-size: 12px;
-        }
+        .copy-btn { background: transparent; border: 1px solid #444; padding: 4px 10px; border-radius: 4px; cursor: pointer; color: #aaa; font-size: 12px; }
         .copy-btn:hover { background: #333; color: #fff; }
-        .delete-btn {
-            background: transparent;
-            border: none;
-            color: #ff4444;
-            cursor: pointer;
-            font-size: 16px;
-        }
+        .delete-btn { background: transparent; border: none; color: #ff4444; cursor: pointer; font-size: 16px; }
         .delete-btn:hover { color: #ff6666; }
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 15px;
-        }
-        .stat {
-            background: #0d0d0d;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .stat .number {
-            font-size: 28px;
-            font-weight: 700;
-            color: #fff;
-        }
-        .stat .label {
-            font-size: 12px;
-            color: #888;
-            margin-top: 4px;
-        }
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #1a1a1a;
-            border: 1px solid #333;
-            padding: 15px 25px;
-            border-radius: 10px;
-            color: #fff;
-            z-index: 999;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
-        }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; }
+        .stat { background: #0d0d0d; padding: 15px; border-radius: 8px; text-align: center; }
+        .stat .number { font-size: 28px; font-weight: 700; color: #fff; }
+        .stat .label { font-size: 12px; color: #888; margin-top: 4px; }
+        .toast { position: fixed; bottom: 20px; right: 20px; background: #1a1a1a; border: 1px solid #333; padding: 15px 25px; border-radius: 10px; color: #fff; z-index: 999; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
         .hidden { display: none; }
         .loading { text-align: center; color: #666; padding: 20px; }
-        #newKeyResult {
-            margin-top: 15px;
-            padding: 10px;
-            background: #0d0d0d;
-            border-radius: 8px;
-            display: none;
-        }
-        #newKeyResult code {
-            color: #4a9eff;
-            font-size: 16px;
-            font-weight: bold;
-        }
-        .footer {
-            margin-top: 40px;
-            color: #555;
-            font-size: 13px;
-            text-align: center;
-            border-top: 1px solid #1a1a1a;
-            padding-top: 20px;
-        }
-        .error-msg {
-            color: #ff4444;
-            font-size: 13px;
-            margin-top: 8px;
-        }
-        .login-box {
-            max-width: 400px;
-            margin: 100px auto;
-            background: #1a1a1a;
-            padding: 30px;
-            border-radius: 12px;
-            border: 1px solid #2a2a2a;
-            text-align: center;
-        }
-        .login-box input {
-            width: 100%;
-            margin: 10px 0;
-        }
-        .login-box button {
-            width: 100%;
-        }
-        .script-editor textarea {
-            background: #0d0d0d;
-            color: #d4d4d4;
-            border: 1px solid #333;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-        .script-editor .row {
-            justify-content: flex-end;
-        }
+        #newKeyResult { margin-top: 15px; padding: 10px; background: #0d0d0d; border-radius: 8px; display: none; }
+        #newKeyResult code { color: #4a9eff; font-size: 16px; font-weight: bold; }
+        .error-msg { color: #ff4444; font-size: 13px; margin-top: 8px; }
+        .footer { margin-top: 40px; color: #555; font-size: 13px; text-align: center; border-top: 1px solid #1a1a1a; padding-top: 20px; }
+        .login-box { max-width: 400px; margin: 100px auto; background: #1a1a1a; padding: 30px; border-radius: 12px; border: 1px solid #2a2a2a; text-align: center; }
+        .login-box input { width: 100%; margin: 10px 0; }
+        .login-box button { width: 100%; }
     </style>
 </head>
 <body>
 
-<!-- Login Screen -->
+<!-- Login -->
 <div id="loginScreen" class="login-box">
     <h2>🔐 Admin Login</h2>
     <input type="password" id="adminPassword" placeholder="Enter password" onkeydown="if(event.key==='Enter') login()">
@@ -206,112 +54,50 @@
     <div id="loginError" class="error-msg hidden"></div>
 </div>
 
-<!-- Dashboard (hidden until login) -->
+<!-- Dashboard -->
 <div id="dashboard" class="container hidden">
     <h1>🔑 Admin Dashboard</h1>
 
-    <!-- Stats -->
-    <div class="card">
-        <h2>📊 Stats</h2>
-        <div class="stats">
-            <div class="stat"><div class="number" id="totalKeys">0</div><div class="label">Total Keys</div></div>
-            <div class="stat"><div class="number" id="activeKeys">0</div><div class="label">Active</div></div>
-            <div class="stat"><div class="number" id="expiredKeys">0</div><div class="label">Expired</div></div>
-        </div>
-    </div>
+    <div class="card"><h2>📊 Stats</h2><div class="stats"><div class="stat"><div class="number" id="totalKeys">0</div><div class="label">Total Keys</div></div><div class="stat"><div class="number" id="activeKeys">0</div><div class="label">Active</div></div><div class="stat"><div class="number" id="expiredKeys">0</div><div class="label">Expired</div></div></div></div>
 
-    <!-- Generate Key -->
-    <div class="card">
-        <h2>🔧 Generate New Key</h2>
-        <div class="row">
-            <select id="keyType">
-                <option value="day">Day (24h)</option>
-                <option value="week">Week (7d)</option>
-                <option value="month">Month (30d)</option>
-                <option value="lifetime">Lifetime</option>
-            </select>
-            <input type="text" id="keyOwner" placeholder="Owner name (optional)" style="flex:1; min-width:150px;">
-            <button onclick="generateKey()">Generate & Save</button>
-        </div>
-        <div id="newKeyResult">
-            <span>✅ New key saved:</span>
-            <code id="newKeyDisplay"></code>
-            <button class="copy-btn" onclick="copyNewKey()">📋 Copy</button>
-            <span id="newKeyType" style="margin-left:10px; color:#888;"></span>
-        </div>
-        <div id="keyError" class="error-msg hidden"></div>
-    </div>
+    <div class="card"><h2>🔧 Generate New Key</h2><div class="row"><select id="keyType"><option value="day">Day (24h)</option><option value="week">Week (7d)</option><option value="month">Month (30d)</option><option value="lifetime">Lifetime</option></select><input type="text" id="keyOwner" placeholder="Owner name (optional)" style="flex:1; min-width:150px;"><button onclick="generateKey()">Generate & Save</button></div><div id="newKeyResult"><span>✅ New key saved:</span><code id="newKeyDisplay"></code><button class="copy-btn" onclick="copyNewKey()">📋 Copy</button><span id="newKeyType" style="margin-left:10px; color:#888;"></span></div><div id="keyError" class="error-msg hidden"></div></div>
 
-    <!-- All Keys -->
-    <div class="card">
-        <h2>📋 All Keys</h2>
-        <div style="overflow-x:auto;">
-            <table>
-                <thead><tr><th>Key</th><th>Type</th><th>Status</th><th>Expires</th><th>Owner</th><th>Created</th><th>Action</th></tr></thead>
-                <tbody id="keyTableBody"><tr><td colspan="7" class="loading">Loading keys...</td></tr></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Script Editor -->
-    <div class="card script-editor">
-        <h2>📝 Edit Script (saved to Supabase)</h2>
-        <textarea id="scriptEditor" placeholder="Paste your Lua script here..."></textarea>
-        <div class="row" style="margin-top:10px;">
-            <button onclick="saveScript()" style="background:#28c840;">💾 Save Script</button>
-            <button onclick="loadScript()" style="background:#4a9eff;">📂 Load Script</button>
-            <span id="scriptStatus" style="color:#888; margin-left:10px;"></span>
-        </div>
-        <div id="scriptError" class="error-msg hidden"></div>
-    </div>
-
-    <div class="footer">Keys and script are stored in Supabase.</div>
+    <div class="card"><h2>📋 All Keys</h2><div style="overflow-x:auto;"><table><thead><tr><th>Key</th><th>Type</th><th>Status</th><th>Expires</th><th>Owner</th><th>Created</th><th>Action</th></tr></thead><tbody id="keyTableBody"><tr><td colspan="7" class="loading">Loading keys...</td></tr></tbody></table></div></div>
+    <div class="footer">Keys are stored in Supabase.</div>
 </div>
 
 <div id="toast" class="toast hidden"></div>
 
 <script>
     const API_URL = '/.netlify/functions/loader';
-    const ADMIN_PASSWORD = '{{ADMIN_PASSWORD}}';  // will be replaced by the function
+    const ADMIN_PASSWORD = '{{ADMIN_PASSWORD}}';
 
-    // ---- Login ----
     function login() {
         const input = document.getElementById('adminPassword').value;
         if (input === ADMIN_PASSWORD) {
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('dashboard').classList.remove('hidden');
             loadKeys();
-            loadScript();
         } else {
-            const err = document.getElementById('loginError');
-            err.textContent = 'Wrong password!';
-            err.classList.remove('hidden');
+            document.getElementById('loginError').textContent = 'Wrong password!';
+            document.getElementById('loginError').classList.remove('hidden');
         }
     }
 
-    // ---- Load keys ----
     async function loadKeys() {
         try {
             const res = await fetch(API_URL);
             if (!res.ok) throw new Error('Failed to fetch keys');
             const data = await res.json();
-            if (data.keys) {
-                renderKeys(data.keys);
-                updateStats(data.keys);
-            }
+            if (data.keys) { renderKeys(data.keys); updateStats(data.keys); }
         } catch (e) {
-            console.error('Load keys error:', e);
-            document.getElementById('keyTableBody').innerHTML =
-                '<tr><td colspan="7" style="text-align:center; color:#ff4444;">Failed to load keys</td></tr>';
+            document.getElementById('keyTableBody').innerHTML = '<tr><td colspan="7" style="text-align:center; color:#ff4444;">Failed to load keys</td></tr>';
         }
     }
 
     function renderKeys(keys) {
         const tbody = document.getElementById('keyTableBody');
-        if (!keys || keys.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#666;">No keys found</td></tr>';
-            return;
-        }
+        if (!keys || keys.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#666;">No keys found</td></tr>'; return; }
         tbody.innerHTML = keys.map(k => {
             const now = new Date();
             const expiresAt = new Date(k.expires_at);
@@ -320,20 +106,7 @@
             const statusText = isExpired ? 'Expired' : k.key_type.charAt(0).toUpperCase() + k.key_type.slice(1);
             const created = new Date(k.created_at).toLocaleString();
             const expires = expiresAt.toLocaleString();
-            return `
-                <tr>
-                    <td><code style="color:#4a9eff; font-size:13px;">${k.key_code}</code></td>
-                    <td><span class="badge ${badgeClass}">${statusText}</span></td>
-                    <td>${isExpired ? '❌' : '✅'}</td>
-                    <td>${expires}</td>
-                    <td>${k.owner || '—'}</td>
-                    <td>${created}</td>
-                    <td>
-                        <button class="copy-btn" onclick="copyKey('${k.key_code}')">Copy</button>
-                        <button class="delete-btn" onclick="deleteKey('${k.key_code}')" title="Delete">🗑️</button>
-                    </td>
-                </tr>
-            `;
+            return `<tr><td><code style="color:#4a9eff; font-size:13px;">${k.key_code}</code></td><td><span class="badge ${badgeClass}">${statusText}</span></td><td>${isExpired ? '❌' : '✅'}</td><td>${expires}</td><td>${k.owner || '—'}</td><td>${created}</td><td><button class="copy-btn" onclick="copyKey('${k.key_code}')">Copy</button><button class="delete-btn" onclick="deleteKey('${k.key_code}')">🗑️</button></td></tr>`;
         }).join('');
     }
 
@@ -341,24 +114,18 @@
         const now = new Date();
         const total = keys.length;
         const active = keys.filter(k => new Date(k.expires_at) > now).length;
-        const expired = total - active;
         document.getElementById('totalKeys').textContent = total;
         document.getElementById('activeKeys').textContent = active;
-        document.getElementById('expiredKeys').textContent = expired;
+        document.getElementById('expiredKeys').textContent = total - active;
     }
 
-    // ---- Generate key ----
     async function generateKey() {
         const type = document.getElementById('keyType').value;
         const owner = document.getElementById('keyOwner').value.trim() || 'Unknown';
-        const errorEl = document.getElementById('keyError');
-        errorEl.classList.add('hidden');
-
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let key = '';
-        for (let i = 0; i < 12; i++) key += chars.charAt(Math.floor(Math.random() * chars.length));
+        for (let i = 0; i < 12; i++) key += chars[Math.floor(Math.random() * chars.length)];
         key = type.charAt(0).toUpperCase() + '-' + key;
-
         const now = new Date();
         let expiresAt = new Date(now);
         switch(type) {
@@ -367,106 +134,40 @@
             case 'month': expiresAt.setDate(now.getDate() + 30); break;
             case 'lifetime': expiresAt.setFullYear(now.getFullYear() + 100); break;
         }
-
         try {
             const res = await fetch(API_URL + '/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    key_code: key,
-                    key_type: type,
-                    owner: owner,
-                    expires_at: expiresAt.toISOString()
-                })
+                body: JSON.stringify({ key_code: key, key_type: type, owner, expires_at: expiresAt.toISOString() })
             });
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error || 'Server error');
-            }
+            if (!res.ok) throw new Error('Server error');
             document.getElementById('newKeyDisplay').textContent = key;
             document.getElementById('newKeyType').textContent = `(${type} key)`;
             document.getElementById('newKeyResult').style.display = 'block';
             showToast('✅ Key saved: ' + key);
             loadKeys();
         } catch (e) {
-            errorEl.textContent = 'Error: ' + e.message;
-            errorEl.classList.remove('hidden');
+            document.getElementById('keyError').textContent = 'Error: ' + e.message;
+            document.getElementById('keyError').classList.remove('hidden');
             showToast('❌ Failed to save key');
         }
     }
 
-    // ---- Delete key ----
     async function deleteKey(key) {
-        if (!confirm(`Delete key: ${key}? This cannot be undone.`)) return;
+        if (!confirm('Delete key: ' + key + '?')) return;
         try {
-            const res = await fetch(API_URL + '/delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ key_code: key })
-            });
-            if (!res.ok) throw new Error('Delete failed');
+            await fetch(API_URL + '/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key_code: key }) });
             showToast('🗑️ Key deleted: ' + key);
             loadKeys();
-        } catch (e) {
-            showToast('❌ Error deleting key');
-        }
+        } catch (e) { showToast('❌ Error deleting key'); }
     }
 
-    // ---- Script operations ----
-    async function loadScript() {
-        try {
-            const res = await fetch(API_URL + '/getscript', { method: 'POST' });
-            if (!res.ok) throw new Error('Failed to load script');
-            const text = await res.text();
-            document.getElementById('scriptEditor').value = text;
-            document.getElementById('scriptStatus').textContent = '✅ Loaded';
-        } catch (e) {
-            document.getElementById('scriptStatus').textContent = '❌ Load failed';
-            document.getElementById('scriptError').textContent = e.message;
-            document.getElementById('scriptError').classList.remove('hidden');
-        }
-    }
-
-    async function saveScript() {
-        const content = document.getElementById('scriptEditor').value;
-        try {
-            const res = await fetch(API_URL + '/savescript', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content })
-            });
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.error || 'Save failed');
-            }
-            document.getElementById('scriptStatus').textContent = '✅ Saved!';
-            showToast('✅ Script saved to Supabase');
-        } catch (e) {
-            document.getElementById('scriptStatus').textContent = '❌ Save failed';
-            document.getElementById('scriptError').textContent = e.message;
-            document.getElementById('scriptError').classList.remove('hidden');
-        }
-    }
-
-    // ---- Copy ----
     function copyKey(key) {
         navigator.clipboard.writeText(key).then(() => showToast('📋 Copied: ' + key))
-            .catch(() => {
-                const el = document.createElement('textarea');
-                el.value = key;
-                document.body.appendChild(el);
-                el.select();
-                document.execCommand('copy');
-                document.body.removeChild(el);
-                showToast('📋 Copied: ' + key);
-            });
+            .catch(() => { const el = document.createElement('textarea'); el.value = key; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); showToast('📋 Copied: ' + key); });
     }
-    function copyNewKey() {
-        const key = document.getElementById('newKeyDisplay').textContent;
-        if (key) copyKey(key);
-    }
+    function copyNewKey() { const key = document.getElementById('newKeyDisplay').textContent; if (key) copyKey(key); }
 
-    // ---- Toast ----
     function showToast(msg) {
         const t = document.getElementById('toast');
         t.textContent = msg;
@@ -474,6 +175,13 @@
         clearTimeout(t._timeout);
         t._timeout = setTimeout(() => t.classList.add('hidden'), 3000);
     }
+
+    // Enter key on password field triggers login
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('adminPassword').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') login();
+        });
+    });
 </script>
 </body>
 </html>

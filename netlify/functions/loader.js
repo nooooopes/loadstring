@@ -1,52 +1,50 @@
 // netlify/functions/loader.js
-const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// Admin password (set in Netlify env)
+// Supabase REST API helpers (no external packages)
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'changeme';
 
-// ---- Load admin.html from file system ----
-let DASHBOARD_HTML = '';
+async function supabaseRequest(method, endpoint, body = null) {
+  const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
+  const headers = {
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'apikey': SUPABASE_KEY,
+    'Content-Type': 'application/json'
+  };
+  const options = { method, headers };
+  if (body) options.body = JSON.stringify(body);
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Supabase error ${res.status}: ${text}`);
+  }
+  return res;
+}
+
+// ---- YOUR OBFUSCATED SCRIPT (hardcoded) ----
+const SCRIPT = `
+-- PASTE YOUR OBFUSCATED SCRIPT HERE
+`;
+
+// ---- Read admin.html and inject password ----
+let adminHtml = '';
 try {
   const filePath = path.join(__dirname, '../../admin.html');
-  DASHBOARD_HTML = fs.readFileSync(filePath, 'utf8');
+  adminHtml = fs.readFileSync(filePath, 'utf8');
+  adminHtml = adminHtml.replace('{{ADMIN_PASSWORD}}', ADMIN_PASSWORD);
 } catch (e) {
-  DASHBOARD_HTML = '<html><body><h1>Dashboard file not found</h1></body></html>';
+  adminHtml = '<html><body><h1>admin.html not found</h1></body></html>';
 }
 
 function isExpired(expiresAt) {
   return new Date() > new Date(expiresAt);
 }
 
-// ---- Helper: get script from Supabase ----
-async function getScript() {
-  const { data, error } = await supabase
-    .from('scripts')
-    .select('content')
-    .eq('id', 1)
-    .single();
-  if (error || !data) {
-    return '-- No script found. Upload one via admin panel.';
-  }
-  return data.content;
-}
-
-// ---- Helper: save script to Supabase ----
-async function saveScript(content) {
-  const { error } = await supabase
-    .from('scripts')
-    .upsert({ id: 1, content }, { onConflict: 'id' });
-  if (error) throw error;
-  return true;
-}
-
 exports.handler = async (event) => {
-  // CORS preflight
+  // CORS
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
@@ -58,7 +56,7 @@ exports.handler = async (event) => {
     };
   }
 
-  // ---- Admin dashboard (GET ?page=admin) ----
+  // ---- Admin dashboard ----
   if (event.httpMethod === 'GET' && event.queryStringParameters && event.queryStringParameters.page === 'admin') {
     const clientIP = (event.headers['x-forwarded-for'] || '').split(',')[0].trim();
     const allowedIP = process.env.ALLOWED_IP;
@@ -69,41 +67,37 @@ exports.handler = async (event) => {
         body: ''
       };
     }
-    // We'll serve the HTML; login is handled client-side via password check
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'text/html' },
-      body: DASHBOARD_HTML
+      body: adminHtml
     };
   }
 
-  // ---- GET: list keys (for dashboard) ----
+  // ---- GET keys ----
   if (event.httpMethod === 'GET') {
     try {
-      const { data, error } = await supabase
-        .from('keys')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
+      const res = await supabaseRequest('GET', 'keys?select=*&order=created_at.desc');
+      const keys = await res.json();
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-        body: JSON.stringify({ keys: data })
+        body: JSON.stringify({ keys })
       };
     } catch (e) {
       return {
         statusCode: 500,
         headers: { 'Access-Control-Allow-Origin': '*' },
-        body: JSON.stringify({ error: 'Database error' })
+        body: JSON.stringify({ error: 'Database error: ' + e.message })
       };
     }
   }
 
-  // ---- POST endpoints ----
+  // ---- POST ----
   if (event.httpMethod === 'POST') {
     const path = event.path;
 
-    // ---- Save key ----
+    // Save key
     if (path.includes('/save')) {
       try {
         const body = JSON.parse(event.body);
@@ -115,10 +109,7 @@ exports.handler = async (event) => {
             body: JSON.stringify({ error: 'Missing fields' })
           };
         }
-        const { error } = await supabase
-          .from('keys')
-          .insert([{ key_code, key_type, owner, expires_at }]);
-        if (error) throw error;
+        await supabaseRequest('POST', 'keys', { key_code, key_type, owner, expires_at });
         return {
           statusCode: 200,
           headers: { 'Access-Control-Allow-Origin': '*' },
@@ -133,7 +124,7 @@ exports.handler = async (event) => {
       }
     }
 
-    // ---- Delete key ----
+    // Delete key
     if (path.includes('/delete')) {
       try {
         const body = JSON.parse(event.body);
@@ -145,11 +136,7 @@ exports.handler = async (event) => {
             body: JSON.stringify({ error: 'Missing key_code' })
           };
         }
-        const { error } = await supabase
-          .from('keys')
-          .delete()
-          .eq('key_code', key_code);
-        if (error) throw error;
+        await supabaseRequest('DELETE', `keys?key_code=eq.${encodeURIComponent(key_code)}`);
         return {
           statusCode: 200,
           headers: { 'Access-Control-Allow-Origin': '*' },
@@ -164,52 +151,7 @@ exports.handler = async (event) => {
       }
     }
 
-    // ---- Save script (from admin) ----
-    if (path.includes('/savescript')) {
-      try {
-        const body = JSON.parse(event.body);
-        const { content } = body;
-        if (!content) {
-          return {
-            statusCode: 400,
-            headers: { 'Access-Control-Allow-Origin': '*' },
-            body: JSON.stringify({ error: 'Missing content' })
-          };
-        }
-        await saveScript(content);
-        return {
-          statusCode: 200,
-          headers: { 'Access-Control-Allow-Origin': '*' },
-          body: JSON.stringify({ success: true })
-        };
-      } catch (e) {
-        return {
-          statusCode: 500,
-          headers: { 'Access-Control-Allow-Origin': '*' },
-          body: JSON.stringify({ error: e.message })
-        };
-      }
-    }
-
-    // ---- Get current script (for admin) ----
-    if (path.includes('/getscript')) {
-      try {
-        const script = await getScript();
-        return {
-          statusCode: 200,
-          headers: { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' },
-          body: script
-        };
-      } catch (e) {
-        return {
-          statusCode: 500,
-          headers: { 'Access-Control-Allow-Origin': '*' },
-          body: JSON.stringify({ error: e.message })
-        };
-      }
-    }
-
-    // ---- Validate key and return script (for loader.lua) ----
+    // ---- Validate key and return script ----
     try {
       const body = JSON.parse(event.body);
       const providedKey = body.key;
@@ -221,20 +163,16 @@ exports.handler = async (event) => {
         };
       }
 
-      const { data: keyData, error } = await supabase
-        .from('keys')
-        .select('*')
-        .eq('key_code', providedKey)
-        .single();
-
-      if (error || !keyData) {
+      const res = await supabaseRequest('GET', `keys?key_code=eq.${encodeURIComponent(providedKey)}&select=*`);
+      const data = await res.json();
+      if (!data || data.length === 0) {
         return {
           statusCode: 401,
           headers: { 'Access-Control-Allow-Origin': '*' },
           body: JSON.stringify({ error: 'Invalid key' })
         };
       }
-
+      const keyData = data[0];
       if (isExpired(keyData.expires_at)) {
         return {
           statusCode: 401,
@@ -243,16 +181,14 @@ exports.handler = async (event) => {
         };
       }
 
-      // Fetch the script from Supabase
-      const script = await getScript();
-
+      // Return the hardcoded script
       return {
         statusCode: 200,
         headers: {
           'Content-Type': 'text/plain',
           'Access-Control-Allow-Origin': '*'
         },
-        body: script
+        body: SCRIPT
       };
     } catch (e) {
       return {
@@ -263,7 +199,7 @@ exports.handler = async (event) => {
     }
   }
 
-  // ---- Anything else → redirect to Discord ----
+  // ---- Fallback: redirect to Discord ----
   return {
     statusCode: 302,
     headers: { Location: 'https://discord.gg/lol' },

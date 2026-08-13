@@ -7,11 +7,11 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'changeme';
 const ALLOWED_IP = process.env.ALLOWED_IP;
 
-if (!SUPABASE_KEY || !SUPABASE_KEY.startsWith('eyJ')) {
-  console.error('❌ SERVICE ROLE KEY IS NOT A JWT! It should start with eyJ.');
-}
+console.log('🔑 Service key present:', !!SUPABASE_KEY);
+console.log('🔑 Service key starts with eyJ?', SUPABASE_KEY?.startsWith('eyJ'));
 
 async function supabaseRequest(method, endpoint, body = null) {
+  // ✅ Correct: use just 'keys' – default schema is public
   const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
   const headers = {
     'Authorization': `Bearer ${SUPABASE_KEY}`,
@@ -61,14 +61,14 @@ exports.handler = async (event) => {
   // ---- Test endpoint ----
   if (event.httpMethod === 'GET' && event.queryStringParameters && event.queryStringParameters.test === '1') {
     try {
-      const res = await supabaseRequest('GET', 'public.keys?limit=1');
+      const res = await supabaseRequest('GET', 'keys?limit=1');
       const data = await res.json();
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
         body: JSON.stringify({
           success: true,
-          message: '✅ Supabase connected!',
+          message: '✅ Supabase connection works!',
           keys: data
         })
       };
@@ -93,7 +93,7 @@ exports.handler = async (event) => {
   // ---- GET keys ----
   if (event.httpMethod === 'GET') {
     try {
-      const res = await supabaseRequest('GET', 'public.keys?select=*&order=created_at.desc');
+      const res = await supabaseRequest('GET', 'keys?select=*&order=created_at.desc');
       const keys = await res.json();
       return {
         statusCode: 200,
@@ -125,7 +125,7 @@ exports.handler = async (event) => {
             body: JSON.stringify({ error: 'Missing fields' })
           };
         }
-        await supabaseRequest('POST', 'public.keys', { key_code, key_type, owner, expires_at });
+        await supabaseRequest('POST', 'keys', { key_code, key_type, owner, expires_at });
         return {
           statusCode: 200,
           headers: { 'Access-Control-Allow-Origin': '*' },
@@ -152,7 +152,7 @@ exports.handler = async (event) => {
             body: JSON.stringify({ error: 'Missing key_code' })
           };
         }
-        await supabaseRequest('DELETE', `public.keys?key_code=eq.${encodeURIComponent(key_code)}`);
+        await supabaseRequest('DELETE', `keys?key_code=eq.${encodeURIComponent(key_code)}`);
         return {
           statusCode: 200,
           headers: { 'Access-Control-Allow-Origin': '*' },
@@ -179,7 +179,7 @@ exports.handler = async (event) => {
         };
       }
 
-      const res = await supabaseRequest('GET', `public.keys?key_code=eq.${encodeURIComponent(providedKey)}&select=*`);
+      const res = await supabaseRequest('GET', `keys?key_code=eq.${encodeURIComponent(providedKey)}&select=*`);
       const data = await res.json();
       if (!data || data.length === 0) {
         return {

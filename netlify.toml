@@ -1,20 +1,17 @@
 [build]
   functions = "netlify/functions"
 
-# Redirect root to Discord
 [[redirects]]
   from = "/"
   to = "https://discord.gg/lol"
   status = 301
 
-# Rewrite /admin to the function so we can serve the dashboard
 [[redirects]]
   from = "/admin"
   to = "/.netlify/functions/loader?page=admin"
   status = 200
   force = true
 
-# Catch-all redirect to Discord (any other path)
 [[redirects]]
   from = "/*"
   to = "https://discord.gg/lol"

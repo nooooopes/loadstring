@@ -2,24 +2,20 @@
 const fs = require('fs');
 const path = require('path');
 
-// ---- Environment ----
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'changeme';
 const ALLOWED_IP = process.env.ALLOWED_IP;
 
-// ---- Validate key format ----
-const isServiceKey = SUPABASE_SERVICE_KEY && SUPABASE_SERVICE_KEY.startsWith('eyJ');
-console.log(`🔑 Service key ${isServiceKey ? '✅ looks like JWT (good)' : '❌ is not a JWT (should start with eyJ)'}`);
+if (!SUPABASE_KEY || !SUPABASE_KEY.startsWith('eyJ')) {
+  console.error('❌ SERVICE ROLE KEY IS NOT A JWT! It should start with eyJ.');
+}
 
 async function supabaseRequest(method, endpoint, body = null) {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    throw new Error('Supabase credentials not set. Check environment variables.');
-  }
   const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
   const headers = {
-    'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
-    'apikey': SUPABASE_SERVICE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'apikey': SUPABASE_KEY,
     'Content-Type': 'application/json'
   };
   const options = { method, headers };
@@ -37,7 +33,6 @@ const SCRIPT = `
 -- PASTE YOUR OBFUSCATED SCRIPT HERE
 `;
 
-// ---- Read admin.html ----
 let adminHtml = '';
 try {
   const filePath = path.join(__dirname, '../../admin.html');
@@ -66,15 +61,14 @@ exports.handler = async (event) => {
   // ---- Test endpoint ----
   if (event.httpMethod === 'GET' && event.queryStringParameters && event.queryStringParameters.test === '1') {
     try {
-      const res = await supabaseRequest('GET', 'keys?limit=1');
+      const res = await supabaseRequest('GET', 'public.keys?limit=1');
       const data = await res.json();
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
         body: JSON.stringify({
           success: true,
-          message: '✅ Supabase connection works!',
-          keyType: SUPABASE_SERVICE_KEY.startsWith('eyJ') ? 'service (JWT)' : 'publishable (wrong)',
+          message: '✅ Supabase connected!',
           keys: data
         })
       };
@@ -82,10 +76,7 @@ exports.handler = async (event) => {
       return {
         statusCode: 500,
         headers: { 'Access-Control-Allow-Origin': '*' },
-        body: JSON.stringify({
-          error: e.message,
-          hint: SUPABASE_SERVICE_KEY?.startsWith('eyJ') ? 'Service key seems valid, but got error.' : 'Your service key is not a JWT. It should start with eyJ. Get the correct key from Supabase → Project Settings → API → service_role.'
-        })
+        body: JSON.stringify({ error: e.message })
       };
     }
   }
@@ -102,7 +93,7 @@ exports.handler = async (event) => {
   // ---- GET keys ----
   if (event.httpMethod === 'GET') {
     try {
-      const res = await supabaseRequest('GET', 'keys?select=*&order=created_at.desc');
+      const res = await supabaseRequest('GET', 'public.keys?select=*&order=created_at.desc');
       const keys = await res.json();
       return {
         statusCode: 200,
@@ -134,7 +125,7 @@ exports.handler = async (event) => {
             body: JSON.stringify({ error: 'Missing fields' })
           };
         }
-        await supabaseRequest('POST', 'keys', { key_code, key_type, owner, expires_at });
+        await supabaseRequest('POST', 'public.keys', { key_code, key_type, owner, expires_at });
         return {
           statusCode: 200,
           headers: { 'Access-Control-Allow-Origin': '*' },
@@ -161,7 +152,7 @@ exports.handler = async (event) => {
             body: JSON.stringify({ error: 'Missing key_code' })
           };
         }
-        await supabaseRequest('DELETE', `keys?key_code=eq.${encodeURIComponent(key_code)}`);
+        await supabaseRequest('DELETE', `public.keys?key_code=eq.${encodeURIComponent(key_code)}`);
         return {
           statusCode: 200,
           headers: { 'Access-Control-Allow-Origin': '*' },
@@ -188,7 +179,7 @@ exports.handler = async (event) => {
         };
       }
 
-      const res = await supabaseRequest('GET', `keys?key_code=eq.${encodeURIComponent(providedKey)}&select=*`);
+      const res = await supabaseRequest('GET', `public.keys?key_code=eq.${encodeURIComponent(providedKey)}&select=*`);
       const data = await res.json();
       if (!data || data.length === 0) {
         return {

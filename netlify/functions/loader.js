@@ -2,22 +2,16 @@
 const fs = require('fs');
 const path = require('path');
 
-// ---- Environment variables ----
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'changeme';
 const ALLOWED_IP = process.env.ALLOWED_IP;
 
-// ---- Validate env ----
-if (!SUPABASE_URL) console.error('Missing SUPABASE_URL');
-if (!SUPABASE_KEY) console.error('Missing SUPABASE_SERVICE_ROLE_KEY');
-if (!ALLOWED_IP) console.error('Missing ALLOWED_IP (admin IP protection)');
-
-// ---- Supabase REST helper ----
 async function supabaseRequest(method, endpoint, body = null) {
   if (!SUPABASE_URL || !SUPABASE_KEY) {
-    throw new Error('Supabase credentials not configured in environment variables');
+    throw new Error('Supabase credentials not set');
   }
+  // Ensure we use the correct endpoint with proper schema
   const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
   const headers = {
     'Authorization': `Bearer ${SUPABASE_KEY}`,
@@ -29,17 +23,17 @@ async function supabaseRequest(method, endpoint, body = null) {
   const res = await fetch(url, options);
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Supabase error ${res.status}: ${text}`);
+    console.error('Supabase error:', text);
+    throw new Error(`Supabase ${res.status}: ${text}`);
   }
   return res;
 }
 
-// ---- YOUR OBFUSCATED LUA SCRIPT ----
+// ---- YOUR OBFUSCATED SCRIPT ----
 const SCRIPT = `
 -- PASTE YOUR OBFUSCATED SCRIPT HERE
 `;
 
-// ---- Read admin.html and inject password ----
 let adminHtml = '';
 try {
   const filePath = path.join(__dirname, '../../admin.html');
@@ -54,7 +48,6 @@ function isExpired(expiresAt) {
 }
 
 exports.handler = async (event) => {
-  // CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
@@ -66,24 +59,36 @@ exports.handler = async (event) => {
     };
   }
 
-  // ---- Admin dashboard (GET ?page=admin) ----
+  // ---- Test endpoint (GET ?test=1) ----
+  if (event.httpMethod === 'GET' && event.queryStringParameters && event.queryStringParameters.test === '1') {
+    try {
+      // Try to select from keys table
+      const res = await supabaseRequest('GET', 'keys?limit=1');
+      const data = await res.json();
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify({ success: true, message: 'Supabase connection works!', keys: data })
+      };
+    } catch (e) {
+      return {
+        statusCode: 500,
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify({ error: e.message })
+      };
+    }
+  }
+
+  // ---- Admin dashboard ----
   if (event.httpMethod === 'GET' && event.queryStringParameters && event.queryStringParameters.page === 'admin') {
     const clientIP = (event.headers['x-forwarded-for'] || '').split(',')[0].trim();
     if (clientIP !== ALLOWED_IP) {
-      return {
-        statusCode: 302,
-        headers: { Location: 'https://discord.gg/lol' },
-        body: ''
-      };
+      return { statusCode: 302, headers: { Location: 'https://discord.gg/lol' }, body: '' };
     }
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'text/html' },
-      body: adminHtml
-    };
+    return { statusCode: 200, headers: { 'Content-Type': 'text/html' }, body: adminHtml };
   }
 
-  // ---- GET keys (for dashboard AJAX) ----
+  // ---- GET keys ----
   if (event.httpMethod === 'GET') {
     try {
       const res = await supabaseRequest('GET', 'keys?select=*&order=created_at.desc');
@@ -97,16 +102,14 @@ exports.handler = async (event) => {
       return {
         statusCode: 500,
         headers: { 'Access-Control-Allow-Origin': '*' },
-        body: JSON.stringify({ error: 'Database error: ' + e.message })
+        body: JSON.stringify({ error: e.message })
       };
     }
   }
 
-  // ---- POST endpoints ----
   if (event.httpMethod === 'POST') {
     const path = event.path;
 
-    // ---- Save key ----
     if (path.includes('/save')) {
       try {
         const body = JSON.parse(event.body);
@@ -133,7 +136,6 @@ exports.handler = async (event) => {
       }
     }
 
-    // ---- Delete key ----
     if (path.includes('/delete')) {
       try {
         const body = JSON.parse(event.body);
@@ -160,7 +162,7 @@ exports.handler = async (event) => {
       }
     }
 
-    // ---- Validate key and return the script ----
+    // Validate key and return script
     try {
       const body = JSON.parse(event.body);
       const providedKey = body.key;
@@ -190,25 +192,20 @@ exports.handler = async (event) => {
         };
       }
 
-      // Return the obfuscated script
       return {
         statusCode: 200,
-        headers: {
-          'Content-Type': 'text/plain',
-          'Access-Control-Allow-Origin': '*'
-        },
+        headers: { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' },
         body: SCRIPT
       };
     } catch (e) {
       return {
         statusCode: 400,
         headers: { 'Access-Control-Allow-Origin': '*' },
-        body: JSON.stringify({ error: 'Invalid request' })
+        body: JSON.stringify({ error: e.message })
       };
     }
   }
 
-  // ---- Fallback: redirect to Discord ----
   return {
     statusCode: 302,
     headers: { Location: 'https://discord.gg/lol' },

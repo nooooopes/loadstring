@@ -8,8 +8,7 @@
   status = 200
   force = true
 
-# Root redirect to Discord – but our function already handles this,
-# so we can keep this as a backup.
+# Root redirect to Discord (backup, but index.html also handles it)
 [[redirects]]
   from = "/"
   to = "https://discord.gg/lol"

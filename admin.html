@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔑 Key Dashboard</title>
+    <title>🔑 Admin Dashboard</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -13,7 +13,7 @@
             padding: 20px;
             min-height: 100vh;
         }
-        .container { max-width: 1100px; margin: 0 auto; }
+        .container { max-width: 1200px; margin: 0 auto; }
         h1 {
             color: #fff;
             border-bottom: 2px solid #333;
@@ -39,13 +39,19 @@
             flex-wrap: wrap;
             align-items: center;
         }
-        input, select, button {
+        input, select, button, textarea {
             padding: 10px 16px;
             border-radius: 8px;
             border: 1px solid #333;
             background: #0d0d0d;
             color: #fff;
             font-size: 14px;
+        }
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            font-family: monospace;
+            resize: vertical;
         }
         button {
             background: #4a9eff;
@@ -162,28 +168,55 @@
             font-size: 13px;
             margin-top: 8px;
         }
+        .login-box {
+            max-width: 400px;
+            margin: 100px auto;
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid #2a2a2a;
+            text-align: center;
+        }
+        .login-box input {
+            width: 100%;
+            margin: 10px 0;
+        }
+        .login-box button {
+            width: 100%;
+        }
+        .script-editor textarea {
+            background: #0d0d0d;
+            color: #d4d4d4;
+            border: 1px solid #333;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .script-editor .row {
+            justify-content: flex-end;
+        }
     </style>
 </head>
 <body>
-<div class="container">
-    <h1>🔑 Key Dashboard</h1>
+
+<!-- Login Screen -->
+<div id="loginScreen" class="login-box">
+    <h2>🔐 Admin Login</h2>
+    <input type="password" id="adminPassword" placeholder="Enter password" onkeydown="if(event.key==='Enter') login()">
+    <button onclick="login()">Login</button>
+    <div id="loginError" class="error-msg hidden"></div>
+</div>
+
+<!-- Dashboard (hidden until login) -->
+<div id="dashboard" class="container hidden">
+    <h1>🔑 Admin Dashboard</h1>
 
     <!-- Stats -->
     <div class="card">
         <h2>📊 Stats</h2>
         <div class="stats">
-            <div class="stat">
-                <div class="number" id="totalKeys">0</div>
-                <div class="label">Total Keys</div>
-            </div>
-            <div class="stat">
-                <div class="number" id="activeKeys">0</div>
-                <div class="label">Active</div>
-            </div>
-            <div class="stat">
-                <div class="number" id="expiredKeys">0</div>
-                <div class="label">Expired</div>
-            </div>
+            <div class="stat"><div class="number" id="totalKeys">0</div><div class="label">Total Keys</div></div>
+            <div class="stat"><div class="number" id="activeKeys">0</div><div class="label">Active</div></div>
+            <div class="stat"><div class="number" id="expiredKeys">0</div><div class="label">Expired</div></div>
         </div>
     </div>
 
@@ -209,38 +242,52 @@
         <div id="keyError" class="error-msg hidden"></div>
     </div>
 
-    <!-- Key List -->
+    <!-- All Keys -->
     <div class="card">
         <h2>📋 All Keys</h2>
         <div style="overflow-x:auto;">
             <table>
-                <thead>
-                    <tr>
-                        <th>Key</th>
-                        <th>Type</th>
-                        <th>Status</th>
-                        <th>Expires</th>
-                        <th>Owner</th>
-                        <th>Created</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="keyTableBody">
-                    <tr><td colspan="7" class="loading">Loading keys...</td></tr>
-                </tbody>
+                <thead><tr><th>Key</th><th>Type</th><th>Status</th><th>Expires</th><th>Owner</th><th>Created</th><th>Action</th></tr></thead>
+                <tbody id="keyTableBody"><tr><td colspan="7" class="loading">Loading keys...</td></tr></tbody>
             </table>
         </div>
     </div>
 
-    <div class="footer">
-        Keys are stored in Supabase. Changes take effect immediately — no redeploy needed.
+    <!-- Script Editor -->
+    <div class="card script-editor">
+        <h2>📝 Edit Script (saved to Supabase)</h2>
+        <textarea id="scriptEditor" placeholder="Paste your Lua script here..."></textarea>
+        <div class="row" style="margin-top:10px;">
+            <button onclick="saveScript()" style="background:#28c840;">💾 Save Script</button>
+            <button onclick="loadScript()" style="background:#4a9eff;">📂 Load Script</button>
+            <span id="scriptStatus" style="color:#888; margin-left:10px;"></span>
+        </div>
+        <div id="scriptError" class="error-msg hidden"></div>
     </div>
+
+    <div class="footer">Keys and script are stored in Supabase.</div>
 </div>
 
 <div id="toast" class="toast hidden"></div>
 
 <script>
     const API_URL = '/.netlify/functions/loader';
+    const ADMIN_PASSWORD = '{{ADMIN_PASSWORD}}';  // will be replaced by the function
+
+    // ---- Login ----
+    function login() {
+        const input = document.getElementById('adminPassword').value;
+        if (input === ADMIN_PASSWORD) {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            loadKeys();
+            loadScript();
+        } else {
+            const err = document.getElementById('loginError');
+            err.textContent = 'Wrong password!';
+            err.classList.remove('hidden');
+        }
+    }
 
     // ---- Load keys ----
     async function loadKeys() {
@@ -307,15 +354,11 @@
         const errorEl = document.getElementById('keyError');
         errorEl.classList.add('hidden');
 
-        // Generate random key
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let key = '';
-        for (let i = 0; i < 12; i++) {
-            key += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
+        for (let i = 0; i < 12; i++) key += chars.charAt(Math.floor(Math.random() * chars.length));
         key = type.charAt(0).toUpperCase() + '-' + key;
 
-        // Calculate expiry
         const now = new Date();
         let expiresAt = new Date(now);
         switch(type) {
@@ -336,19 +379,15 @@
                     expires_at: expiresAt.toISOString()
                 })
             });
-
             if (!res.ok) {
                 const err = await res.json();
                 throw new Error(err.error || 'Server error');
             }
-
-            // Success – show key
             document.getElementById('newKeyDisplay').textContent = key;
             document.getElementById('newKeyType').textContent = `(${type} key)`;
             document.getElementById('newKeyResult').style.display = 'block';
             showToast('✅ Key saved: ' + key);
-            loadKeys(); // refresh list
-
+            loadKeys();
         } catch (e) {
             errorEl.textContent = 'Error: ' + e.message;
             errorEl.classList.remove('hidden');
@@ -373,21 +412,55 @@
         }
     }
 
-    // ---- Copy ----
-    function copyKey(key) {
-        navigator.clipboard.writeText(key).then(() => {
-            showToast('📋 Copied: ' + key);
-        }).catch(() => {
-            const el = document.createElement('textarea');
-            el.value = key;
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-            showToast('📋 Copied: ' + key);
-        });
+    // ---- Script operations ----
+    async function loadScript() {
+        try {
+            const res = await fetch(API_URL + '/getscript', { method: 'POST' });
+            if (!res.ok) throw new Error('Failed to load script');
+            const text = await res.text();
+            document.getElementById('scriptEditor').value = text;
+            document.getElementById('scriptStatus').textContent = '✅ Loaded';
+        } catch (e) {
+            document.getElementById('scriptStatus').textContent = '❌ Load failed';
+            document.getElementById('scriptError').textContent = e.message;
+            document.getElementById('scriptError').classList.remove('hidden');
+        }
     }
 
+    async function saveScript() {
+        const content = document.getElementById('scriptEditor').value;
+        try {
+            const res = await fetch(API_URL + '/savescript', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content })
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Save failed');
+            }
+            document.getElementById('scriptStatus').textContent = '✅ Saved!';
+            showToast('✅ Script saved to Supabase');
+        } catch (e) {
+            document.getElementById('scriptStatus').textContent = '❌ Save failed';
+            document.getElementById('scriptError').textContent = e.message;
+            document.getElementById('scriptError').classList.remove('hidden');
+        }
+    }
+
+    // ---- Copy ----
+    function copyKey(key) {
+        navigator.clipboard.writeText(key).then(() => showToast('📋 Copied: ' + key))
+            .catch(() => {
+                const el = document.createElement('textarea');
+                el.value = key;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                showToast('📋 Copied: ' + key);
+            });
+    }
     function copyNewKey() {
         const key = document.getElementById('newKeyDisplay').textContent;
         if (key) copyKey(key);
@@ -401,9 +474,6 @@
         clearTimeout(t._timeout);
         t._timeout = setTimeout(() => t.classList.add('hidden'), 3000);
     }
-
-    // ---- Initial load ----
-    document.addEventListener('DOMContentLoaded', loadKeys);
 </script>
 </body>
 </html>

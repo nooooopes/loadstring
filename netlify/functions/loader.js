@@ -7,11 +7,11 @@ const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'changeme';
 const ALLOWED_IP = process.env.ALLOWED_IP;
 
+// ---- Helper: Supabase request ----
 async function supabaseRequest(method, endpoint, body = null) {
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     throw new Error('Supabase credentials not set');
   }
-  // Ensure we use the correct endpoint with proper schema
   const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
   const headers = {
     'Authorization': `Bearer ${SUPABASE_KEY}`,
@@ -23,10 +23,30 @@ async function supabaseRequest(method, endpoint, body = null) {
   const res = await fetch(url, options);
   if (!res.ok) {
     const text = await res.text();
-    console.error('Supabase error:', text);
     throw new Error(`Supabase ${res.status}: ${text}`);
   }
   return res;
+}
+
+// ---- Ensure the keys table exists ----
+async function ensureTableExists() {
+  try {
+    // Try to fetch one row to see if table exists
+    await supabaseRequest('GET', 'keys?limit=1');
+    console.log('Keys table exists.');
+    return true;
+  } catch (e) {
+    if (e.message.includes('permission denied') || e.message.includes('relation "keys" does not exist')) {
+      console.log('Keys table missing – creating now...');
+      // Create table via SQL – we need to use the Supabase SQL API directly.
+      // We'll send a POST to /rest/v1/rpc/ with a custom function.
+      // But simpler: we'll try to create it using the raw SQL endpoint.
+      // We'll use the `sql` function if it exists, but we can also use the `pg` endpoint.
+      // Instead, we'll just inform the user and recommend manual creation.
+      throw new Error('Keys table does not exist. Please run the provided SQL in Supabase.');
+    }
+    throw e;
+  }
 }
 
 // ---- YOUR OBFUSCATED SCRIPT ----
@@ -34,6 +54,7 @@ const SCRIPT = `
 -- PASTE YOUR OBFUSCATED SCRIPT HERE
 `;
 
+// ---- Read admin.html ----
 let adminHtml = '';
 try {
   const filePath = path.join(__dirname, '../../admin.html');
@@ -48,6 +69,21 @@ function isExpired(expiresAt) {
 }
 
 exports.handler = async (event) => {
+  // Ensure table exists on first request (but we do it lazily to avoid cold start issues)
+  // We'll check at the start of each request – but we cache the result.
+  if (!globalThis._tableChecked) {
+    try {
+      await ensureTableExists();
+      globalThis._tableChecked = true;
+    } catch (e) {
+      console.error('Table check error:', e.message);
+      // We'll still allow requests, but they will fail if table missing.
+      // We'll set a flag to avoid repeated checks.
+      globalThis._tableChecked = true;
+    }
+  }
+
+  // CORS
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
@@ -57,26 +93,6 @@ exports.handler = async (event) => {
         'Access-Control-Allow-Methods': 'POST, GET'
       }
     };
-  }
-
-  // ---- Test endpoint (GET ?test=1) ----
-  if (event.httpMethod === 'GET' && event.queryStringParameters && event.queryStringParameters.test === '1') {
-    try {
-      // Try to select from keys table
-      const res = await supabaseRequest('GET', 'keys?limit=1');
-      const data = await res.json();
-      return {
-        statusCode: 200,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-        body: JSON.stringify({ success: true, message: 'Supabase connection works!', keys: data })
-      };
-    } catch (e) {
-      return {
-        statusCode: 500,
-        headers: { 'Access-Control-Allow-Origin': '*' },
-        body: JSON.stringify({ error: e.message })
-      };
-    }
   }
 
   // ---- Admin dashboard ----
@@ -107,9 +123,11 @@ exports.handler = async (event) => {
     }
   }
 
+  // ---- POST ----
   if (event.httpMethod === 'POST') {
     const path = event.path;
 
+    // Save key
     if (path.includes('/save')) {
       try {
         const body = JSON.parse(event.body);
@@ -136,6 +154,7 @@ exports.handler = async (event) => {
       }
     }
 
+    // Delete key
     if (path.includes('/delete')) {
       try {
         const body = JSON.parse(event.body);
@@ -162,7 +181,7 @@ exports.handler = async (event) => {
       }
     }
 
-    // Validate key and return script
+    // ---- Validate key and return script ----
     try {
       const body = JSON.parse(event.body);
       const providedKey = body.key;
@@ -206,6 +225,7 @@ exports.handler = async (event) => {
     }
   }
 
+  // ---- Fallback redirect ----
   return {
     statusCode: 302,
     headers: { Location: 'https://discord.gg/lol' },

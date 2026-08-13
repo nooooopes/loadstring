@@ -6,8 +6,9 @@
   from = "/"
   to = "https://discord.gg/lol"
   status = 301
+  force = true
 
-# Rewrite /admin to the function (so the dashboard loads)
+# Rewrite /admin to the function
 [[redirects]]
   from = "/admin"
   to = "/.netlify/functions/loader?page=admin"
@@ -19,3 +20,4 @@
   from = "/*"
   to = "https://discord.gg/lol"
   status = 301
+  force = true

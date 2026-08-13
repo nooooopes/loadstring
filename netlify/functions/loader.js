@@ -12,16 +12,11 @@ const SCRIPT = `
 -- PASTE YOUR OBFUSCATED SCRIPT HERE
 `;
 
-// ---- Read the dashboard HTML file ----
-// admin.html must be in the same directory as this function (or we can use path)
 let DASHBOARD_HTML = '';
 try {
-  // In Netlify, the function runs from the root of the site, so we need to find the file.
-  // We'll look for it relative to the function file.
   const filePath = path.join(__dirname, '../../admin.html');
   DASHBOARD_HTML = fs.readFileSync(filePath, 'utf8');
 } catch (e) {
-  console.error('Failed to load admin.html:', e);
   DASHBOARD_HTML = '<html><body><h1>Dashboard file not found</h1></body></html>';
 }
 

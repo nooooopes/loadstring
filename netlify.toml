@@ -7,3 +7,18 @@
   to = "/.netlify/functions/loader?page=admin"
   status = 200
   force = true
+
+# Root redirect to Discord – but our function already handles this,
+# so we can keep this as a backup.
+[[redirects]]
+  from = "/"
+  to = "https://discord.gg/lol"
+  status = 301
+  force = true
+
+# Catch-all redirect (optional)
+[[redirects]]
+  from = "/*"
+  to = "https://discord.gg/lol"
+  status = 301
+  force = true

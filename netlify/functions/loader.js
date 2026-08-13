@@ -2,12 +2,22 @@
 const fs = require('fs');
 const path = require('path');
 
-// Supabase REST API helpers (no external packages)
+// ---- Environment variables ----
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'changeme';
+const ALLOWED_IP = process.env.ALLOWED_IP;
 
+// ---- Validate env ----
+if (!SUPABASE_URL) console.error('Missing SUPABASE_URL');
+if (!SUPABASE_KEY) console.error('Missing SUPABASE_SERVICE_ROLE_KEY');
+if (!ALLOWED_IP) console.error('Missing ALLOWED_IP (admin IP protection)');
+
+// ---- Supabase REST helper ----
 async function supabaseRequest(method, endpoint, body = null) {
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    throw new Error('Supabase credentials not configured in environment variables');
+  }
   const url = `${SUPABASE_URL}/rest/v1/${endpoint}`;
   const headers = {
     'Authorization': `Bearer ${SUPABASE_KEY}`,
@@ -24,7 +34,7 @@ async function supabaseRequest(method, endpoint, body = null) {
   return res;
 }
 
-// ---- YOUR OBFUSCATED SCRIPT (hardcoded) ----
+// ---- YOUR OBFUSCATED LUA SCRIPT ----
 const SCRIPT = `
 -- PASTE YOUR OBFUSCATED SCRIPT HERE
 `;
@@ -36,7 +46,7 @@ try {
   adminHtml = fs.readFileSync(filePath, 'utf8');
   adminHtml = adminHtml.replace('{{ADMIN_PASSWORD}}', ADMIN_PASSWORD);
 } catch (e) {
-  adminHtml = '<html><body><h1>admin.html not found</h1></body></html>';
+  adminHtml = `<html><body><h1>admin.html not found</h1><p>${e.message}</p></body></html>`;
 }
 
 function isExpired(expiresAt) {
@@ -44,7 +54,7 @@ function isExpired(expiresAt) {
 }
 
 exports.handler = async (event) => {
-  // CORS
+  // CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
@@ -56,11 +66,10 @@ exports.handler = async (event) => {
     };
   }
 
-  // ---- Admin dashboard ----
+  // ---- Admin dashboard (GET ?page=admin) ----
   if (event.httpMethod === 'GET' && event.queryStringParameters && event.queryStringParameters.page === 'admin') {
     const clientIP = (event.headers['x-forwarded-for'] || '').split(',')[0].trim();
-    const allowedIP = process.env.ALLOWED_IP;
-    if (clientIP !== allowedIP) {
+    if (clientIP !== ALLOWED_IP) {
       return {
         statusCode: 302,
         headers: { Location: 'https://discord.gg/lol' },
@@ -74,7 +83,7 @@ exports.handler = async (event) => {
     };
   }
 
-  // ---- GET keys ----
+  // ---- GET keys (for dashboard AJAX) ----
   if (event.httpMethod === 'GET') {
     try {
       const res = await supabaseRequest('GET', 'keys?select=*&order=created_at.desc');
@@ -93,11 +102,11 @@ exports.handler = async (event) => {
     }
   }
 
-  // ---- POST ----
+  // ---- POST endpoints ----
   if (event.httpMethod === 'POST') {
     const path = event.path;
 
-    // Save key
+    // ---- Save key ----
     if (path.includes('/save')) {
       try {
         const body = JSON.parse(event.body);
@@ -124,7 +133,7 @@ exports.handler = async (event) => {
       }
     }
 
-    // Delete key
+    // ---- Delete key ----
     if (path.includes('/delete')) {
       try {
         const body = JSON.parse(event.body);
@@ -151,7 +160,7 @@ exports.handler = async (event) => {
       }
     }
 
-    // ---- Validate key and return script ----
+    // ---- Validate key and return the script ----
     try {
       const body = JSON.parse(event.body);
       const providedKey = body.key;
@@ -181,7 +190,7 @@ exports.handler = async (event) => {
         };
       }
 
-      // Return the hardcoded script
+      // Return the obfuscated script
       return {
         statusCode: 200,
         headers: {

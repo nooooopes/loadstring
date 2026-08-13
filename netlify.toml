@@ -1,0 +1,8 @@
+[build]
+  functions = "netlify/functions"
+
+# Optional: redirect visitors to your Discord
+[[redirects]]
+  from = "/*"
+  to = "https://discord.gg/yourinvite"
+  status = 301

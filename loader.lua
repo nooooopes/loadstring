@@ -76,7 +76,7 @@ local function showGUI()
         status.TextColor3 = Color3.fromRGB(200, 200, 200)
         btn.Visible = false
 
-        -- REPLACE THIS URL with your Netlify function URL
+        -- REPLACE THIS URL with your Netlify site URL
         local url = "https://YOUR-SITE.netlify.app/.netlify/functions/loader"
         local data = game:GetService("HttpService"):JSONEncode({ key = key })
 

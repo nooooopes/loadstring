@@ -7,11 +7,10 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// ---- YOUR OBFUSCATED LUA SCRIPT ----
-const SCRIPT = `
--- PASTE YOUR OBFUSCATED SCRIPT HERE
-`;
+// Admin password (set in Netlify env)
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'changeme';
 
+// ---- Load admin.html from file system ----
 let DASHBOARD_HTML = '';
 try {
   const filePath = path.join(__dirname, '../../admin.html');
@@ -22,6 +21,28 @@ try {
 
 function isExpired(expiresAt) {
   return new Date() > new Date(expiresAt);
+}
+
+// ---- Helper: get script from Supabase ----
+async function getScript() {
+  const { data, error } = await supabase
+    .from('scripts')
+    .select('content')
+    .eq('id', 1)
+    .single();
+  if (error || !data) {
+    return '-- No script found. Upload one via admin panel.';
+  }
+  return data.content;
+}
+
+// ---- Helper: save script to Supabase ----
+async function saveScript(content) {
+  const { error } = await supabase
+    .from('scripts')
+    .upsert({ id: 1, content }, { onConflict: 'id' });
+  if (error) throw error;
+  return true;
 }
 
 exports.handler = async (event) => {
@@ -48,6 +69,7 @@ exports.handler = async (event) => {
         body: ''
       };
     }
+    // We'll serve the HTML; login is handled client-side via password check
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'text/html' },
@@ -55,7 +77,7 @@ exports.handler = async (event) => {
     };
   }
 
-  // ---- GET keys (for dashboard AJAX) ----
+  // ---- GET: list keys (for dashboard) ----
   if (event.httpMethod === 'GET') {
     try {
       const { data, error } = await supabase
@@ -81,7 +103,7 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'POST') {
     const path = event.path;
 
-    // Save key
+    // ---- Save key ----
     if (path.includes('/save')) {
       try {
         const body = JSON.parse(event.body);
@@ -103,7 +125,6 @@ exports.handler = async (event) => {
           body: JSON.stringify({ success: true })
         };
       } catch (e) {
-        console.error('Save error:', e);
         return {
           statusCode: 500,
           headers: { 'Access-Control-Allow-Origin': '*' },
@@ -112,7 +133,7 @@ exports.handler = async (event) => {
       }
     }
 
-    // Delete key
+    // ---- Delete key ----
     if (path.includes('/delete')) {
       try {
         const body = JSON.parse(event.body);
@@ -143,7 +164,52 @@ exports.handler = async (event) => {
       }
     }
 
-    // Validate key and return script
+    // ---- Save script (from admin) ----
+    if (path.includes('/savescript')) {
+      try {
+        const body = JSON.parse(event.body);
+        const { content } = body;
+        if (!content) {
+          return {
+            statusCode: 400,
+            headers: { 'Access-Control-Allow-Origin': '*' },
+            body: JSON.stringify({ error: 'Missing content' })
+          };
+        }
+        await saveScript(content);
+        return {
+          statusCode: 200,
+          headers: { 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify({ success: true })
+        };
+      } catch (e) {
+        return {
+          statusCode: 500,
+          headers: { 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify({ error: e.message })
+        };
+      }
+    }
+
+    // ---- Get current script (for admin) ----
+    if (path.includes('/getscript')) {
+      try {
+        const script = await getScript();
+        return {
+          statusCode: 200,
+          headers: { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' },
+          body: script
+        };
+      } catch (e) {
+        return {
+          statusCode: 500,
+          headers: { 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify({ error: e.message })
+        };
+      }
+    }
+
+    // ---- Validate key and return script (for loader.lua) ----
     try {
       const body = JSON.parse(event.body);
       const providedKey = body.key;
@@ -177,13 +243,16 @@ exports.handler = async (event) => {
         };
       }
 
+      // Fetch the script from Supabase
+      const script = await getScript();
+
       return {
         statusCode: 200,
         headers: {
           'Content-Type': 'text/plain',
           'Access-Control-Allow-Origin': '*'
         },
-        body: SCRIPT
+        body: script
       };
     } catch (e) {
       return {
